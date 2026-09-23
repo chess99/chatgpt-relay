@@ -1,0 +1,59 @@
+name: Relay message
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Message to relay
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  relay:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issues' &&
+        startsWith(github.event.issue.title, '[relay]') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare relay message
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          MANUAL_MESSAGE: ${{ inputs.message }}
+        run: |
+          if [ "$EVENT_NAME" = "issues" ]; then
+            printf '%s' "$ISSUE_BODY" > "$RUNNER_TEMP/relay-message.txt"
+          else
+            printf '%s' "$MANUAL_MESSAGE" > "$RUNNER_TEMP/relay-message.txt"
+          fi
+
+      - name: Relay message
+        env:
+          RELAY_PROVIDER: ${{ vars.RELAY_PROVIDER || 'feishu' }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_WEBHOOK_SECRET }}
+        run: |
+          RELAY_MESSAGE="$(cat "$RUNNER_TEMP/relay-message.txt")"
+          export RELAY_MESSAGE
+          python3 -m relay.main
+
+      - name: Close relay issue after successful delivery
+        if: github.event_name == 'issues' && success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
