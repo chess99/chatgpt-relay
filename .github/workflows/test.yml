@@ -23,4 +23,4 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       - name: Compile relay
-        run: python -m py_compile relay/main.py relay/providers/feishu.py
+        run: python -m compileall -q relay tests

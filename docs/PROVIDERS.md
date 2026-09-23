@@ -1,60 +1,61 @@
-# Provider 扩展约定
+# Provider 指南
 
-`chatgpt-relay` 的核心不绑定任何消息平台。`relay/main.py` 只负责选择 provider，并把最终消息交给 provider。
+`chatgpt-relay` 只做一件事：把 ChatGPT 触发的消息，从 GitHub Actions 单向投递到外部渠道。
 
-当前内置：
+设计借鉴了 OpenClaw 的 channel 分层思路：**核心不理解各平台凭据和 API；每个 provider 自己负责配置、限长、认证和错误处理。** 我们没有复制 OpenClaw 的实现代码，也没有引入它的 Gateway/常驻连接层。
 
-- `feishu` → `relay/providers/feishu.py`
-  - 群自定义机器人 Webhook
-  - 企业自建应用 App API
+## 已内置
 
-未来可以增加：
+| Provider | `RELAY_PROVIDER` | GitHub Actions Secrets |
+| --- | --- | --- |
+| Feishu / Lark | `feishu` | Webhook: `FEISHU_WEBHOOK_URL`, 可选 `FEISHU_WEBHOOK_SECRET`; 或 App: `FEISHU_APP_ID`, `FEISHU_APP_SECRET`, `FEISHU_CHAT_ID` |
+| Telegram | `telegram` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+| Discord | `discord` | 推荐 `DISCORD_WEBHOOK_URL`; 或 `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_ID` |
+| Slack | `slack` | 推荐 `SLACK_WEBHOOK_URL`; 或 `SLACK_BOT_TOKEN`, `SLACK_CHANNEL_ID` |
+| Google Chat | `googlechat` | `GOOGLE_CHAT_WEBHOOK_URL` |
+| LINE | `line` | `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_TO_ID` |
+| 企业微信 / WeCom | `wecom` | `WECOM_WEBHOOK_URL` |
+| Twilio SMS | `twilio` / `sms` | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_TO`，以及 `TWILIO_FROM` 或 `TWILIO_MESSAGING_SERVICE_SID` |
 
-- `telegram`
-- `wecom`
-- `slack`
-- `email`
-- 任何有 HTTP API / Webhook 的渠道
+## 为什么没有把 OpenClaw 的所有渠道都搬进来？
+
+OpenClaw 是长期在线 Gateway，能保存连接状态、处理入站事件、二维码登录和本地桥接。GitHub-hosted relay 是短生命周期、纯 outbound runner。
+
+因此以下类型**不适合**本项目当前模型：
+
+- iMessage：依赖已登录 Mac、本地 Messages 数据库 / bridge。
+- WhatsApp：需要二维码配对和持久会话状态。
+- Signal：通常依赖长期可用的 signal-cli 注册状态。
+- 微信个人号 / 二维码机器人：依赖扫码登录和持久状态。
+- IRC / Matrix / Mattermost 等：虽然能做纯 outbound，但更适合有完整账户会话或长期连接的客户端；后续有需求再加。
+- 语音电话：可以像 Twilio SMS 一样做，但涉及更高费用和电话流程，暂不默认内置。
+
+我们的原则是：**只有“GitHub Actions 启动后，凭几个 Secrets 就能安全地完成一次发送”的渠道，才优先内置。**
 
 ## Provider 接口
 
-每个 provider 模块实现：
+每个 provider 模块只需要实现：
 
 ```python
 def send(message: str) -> None:
     ...
 ```
 
-Provider 自己从环境变量读取所需凭据，成功时返回 `None`，失败时抛出异常。不要把 Secret 作为命令行参数，也不要打印 Secret。
+核心通过 `relay/providers/__init__.py` 的 registry 解析 provider。新增 provider 时：
 
-同一个 provider 可以支持多种认证方式。例如 Feishu provider 会优先使用 Webhook；如果没有配置 Webhook，则尝试 App ID/App Secret + chat_id。
+1. 建立 `relay/providers/<name>.py`。
+2. 只从环境变量读取配置，不读取仓库文件里的凭据。
+3. 使用 `relay.http` 发 HTTP 请求。
+4. 使用 `relay.text.chunk_text` 适配平台限长。
+5. 在 registry 中注册 canonical name 和必要 alias。
+6. 把 Secrets 映射加入 `.github/workflows/relay.yml`。
+7. 增加离线单元测试和 README 配置说明。
 
-然后在 `relay/main.py` 的 provider registry 中注册：
+## 安全约束
 
-```python
-PROVIDERS = {
-    "feishu": feishu.send,
-    "telegram": telegram.send,
-}
-```
-
-## GitHub Actions 配置
-
-通用 workflow 使用仓库变量：
-
-- `RELAY_PROVIDER`
-
-未设置时默认 `feishu`。
-
-新增 provider 时，把该 provider 需要的 GitHub Actions Secrets 映射为同名环境变量即可。不要把真实 Secret 写进 workflow 文件，也不要尝试从 Issue 正文传递 Secret。
-
-## 安全要求
-
-新增 provider 必须：
-
-1. 不把 Secret 写入源码、Issue、日志或测试 fixture。
-2. 使用 GitHub Actions Secrets 注入凭据。
-3. 对外部 HTTP 请求设置超时。
-4. 对服务端错误做有限长度的非敏感错误输出。
-5. 给签名、载荷生成和配置选择逻辑增加离线单元测试。
-6. 不要因为一个 provider 失败就回退到另一个未明确配置的渠道。
+- 不把 Secret 作为 CLI 参数。
+- 不在错误信息里打印 Webhook URL、Token、Authorization header。
+- Webhook URL 本身按 Secret 对待。
+- 外部请求必须设置超时。
+- 不自动回退到另一个 provider；配错就明确失败。
+- 一个 relay Issue 成功投递后才自动关闭，失败时保留为 open，方便排查。

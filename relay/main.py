@@ -1,28 +1,15 @@
 import os
 import sys
 
-from relay.providers import feishu
+from relay.providers import resolve_provider
 
 
-PROVIDERS = {
-    "feishu": feishu.send,
-}
-
-
-def dispatch(provider_name: str, message: str) -> None:
-    name = provider_name.strip().lower()
-    if not name:
-        raise ValueError("RELAY_PROVIDER must not be empty")
+def dispatch(provider_name: str, message: str) -> str:
     if not message.strip():
         raise ValueError("RELAY_MESSAGE must not be empty")
-
-    try:
-        sender = PROVIDERS[name]
-    except KeyError as exc:
-        supported = ", ".join(sorted(PROVIDERS))
-        raise ValueError(f"Unsupported RELAY_PROVIDER '{name}'. Supported: {supported}") from exc
-
-    sender(message)
+    spec = resolve_provider(provider_name)
+    spec.sender(message)
+    return spec.name
 
 
 def main() -> int:
@@ -30,12 +17,12 @@ def main() -> int:
     message = os.environ.get("RELAY_MESSAGE", "")
 
     try:
-        dispatch(provider_name, message)
+        delivered_by = dispatch(provider_name, message)
     except Exception as exc:
         print(f"Relay failed: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Relay delivered via provider '{provider_name.strip().lower()}'.")
+    print(f"Relay delivered via provider '{delivered_by}'.")
     return 0
 
 
