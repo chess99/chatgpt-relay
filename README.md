@@ -18,16 +18,16 @@ provider
 
 | 渠道 | Provider | 最省事的接法 |
 | --- | --- | --- |
-| Feishu / Lark | `feishu` | 群自定义机器人 Webhook |
-| Telegram | `telegram` | BotFather token + chat ID |
-| Discord | `discord` | Channel webhook |
-| Slack | `slack` | Incoming webhook |
-| Google Chat | `googlechat` | Space incoming webhook |
-| LINE | `line` | Messaging API access token + 目标 ID |
-| 企业微信 / WeCom | `wecom` | 群机器人 webhook |
-| SMS | `twilio` | Twilio 账号 + 发送/接收号码 |
+| Feishu / Lark | `feishu` | [群自定义机器人 Webhook](docs/setup/feishu.md) |
+| Telegram | `telegram` | [BotFather token + chat ID](docs/setup/telegram.md) |
+| Discord | `discord` | [Channel webhook](docs/setup/discord.md) |
+| Slack | `slack` | [Incoming webhook](docs/setup/slack.md) |
+| Google Chat | `googlechat` | [Space incoming webhook](docs/setup/googlechat.md) |
+| LINE | `line` | [Messaging API access token + 目标 ID](docs/setup/line.md) |
+| 企业微信 / WeCom | `wecom` | [群机器人 webhook](docs/setup/wecom.md) |
+| SMS | `twilio` | [Twilio 账号 + 发送/接收号码](docs/setup/twilio.md) |
 
-Feishu、Discord、Slack 还支持更完整的 App/Bot API 模式。所有 provider 与 Secret 说明见 [docs/PROVIDERS.md](docs/PROVIDERS.md)。
+Feishu、Discord、Slack 还支持更完整的 App/Bot API 模式。第一次使用建议直接从 [渠道配置指南](docs/setup/README.md) 进入；完整 provider/Secret 参考见 [docs/PROVIDERS.md](docs/PROVIDERS.md)。
 
 这个架构参考了 OpenClaw 的“channel 独立封装”思路，但只实现适合 GitHub Actions 的**无服务器单向通知层**。哪些 OpenClaw 渠道不适合这种模型，见 [docs/OPENCLAW-NOTES.md](docs/OPENCLAW-NOTES.md)。
 
@@ -133,6 +133,16 @@ SECURITY.md
 docs/
   PROVIDERS.md
   OPENCLAW-NOTES.md
+  setup/
+    README.md
+    feishu.md
+    telegram.md
+    discord.md
+    slack.md
+    googlechat.md
+    line.md
+    wecom.md
+    twilio.md
 ```
 
 ## 开发与测试

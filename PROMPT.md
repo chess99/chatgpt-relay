@@ -8,7 +8,7 @@
 - `<忽略条件>`：哪些相似情况不要提醒
 - `<检查频率>`：例如“每小时”；也可以写“由你选择合理频率”
 
-外部消息渠道已经由仓库的 GitHub Actions/provider 配置好；你不需要把 Webhook、Token 或 Secret 提供给 ChatGPT。
+外部消息渠道应先按仓库的 `docs/setup/` 指南配置好并通过 `Relay message` 手动测试；你不需要、也不应该把 Webhook、Token 或 Secret 提供给 ChatGPT。
 
 ---
 
