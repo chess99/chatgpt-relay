@@ -2,7 +2,7 @@
 
 把 ChatGPT 的计划任务/条件监控，在真正命中条件时，转发到你自己的消息渠道。**不需要 VPS、NAS 或常驻服务器。**
 
-目前内置的第一个 provider 是 **飞书 / Lark 自定义机器人**。仓库本身不绑定飞书：核心只负责“ChatGPT → GitHub Issue → GitHub Actions → provider”，以后可以继续增加 Telegram、企业微信、Slack、邮件或其他渠道。
+目前内置的第一个 provider 是 **飞书 / Lark**。仓库本身不绑定飞书：核心只负责“ChatGPT → GitHub Issue → GitHub Actions → provider”，以后可以继续增加 Telegram、企业微信、Slack、邮件或其他渠道。
 
 ## 工作原理
 
@@ -24,9 +24,9 @@ GitHub Issues 同时保留发送历史，ChatGPT 可以用规范 URL、帖子 ID
 
 ## 当前支持
 
-| Provider | 状态 | 凭据 |
+| Provider | 状态 | 认证方式 |
 | --- | --- | --- |
-| Feishu / Lark 自定义机器人 | ✅ 内置 | `FEISHU_WEBHOOK_URL`、可选 `FEISHU_WEBHOOK_SECRET` |
+| Feishu / Lark | ✅ 内置 | 群自定义机器人 Webhook；或企业自建应用 App ID/App Secret + chat_id |
 | Telegram | ⏳ 未内置 | provider 接口已预留 |
 | 企业微信 / WeCom | ⏳ 未内置 | provider 接口已预留 |
 | Slack / Email / 其他 | ⏳ 未内置 | provider 接口已预留 |
@@ -36,7 +36,7 @@ GitHub Issues 同时保留发送历史，ChatGPT 可以用规范 URL、帖子 ID
 ## 你需要准备什么
 
 1. 一个 GitHub 账号。
-2. 一个你要使用的消息渠道；本版教程先以飞书群“自定义机器人”为例。
+2. 一个你要使用的消息渠道；本版教程先以飞书为例。
 3. ChatGPT 中可用的计划任务/自动化功能，以及 GitHub 连接。
 
 **Secret 不要上传成 ChatGPT Source，也不要提交进 Git。** 仓库只放公开代码；真正的 Webhook、Token、Secret 放在 GitHub Actions Secrets。
@@ -54,28 +54,54 @@ GitHub Issues 同时保留发送历史，ChatGPT 可以用规范 URL、帖子 ID
 
 ## 2. 配置 provider（本版：飞书）
 
+Feishu provider 支持两种模式。**新用户优先用 A；已经有企业自建应用的用户可以直接用 B。**
+
+### A. 群自定义机器人 Webhook（推荐给新用户）
+
 在目标飞书群中添加“自定义机器人”，复制：
 - Webhook URL
 - 签名校验 Secret（如果开启签名校验）
 
 推荐开启**签名校验**。Webhook URL 本身也应视为 Secret。
 
-使用 GitHub 托管 runner 时，一般不要依赖固定出口 IP 白名单，因为 runner 的公网出口不是你的固定服务器。
-
-## 3. 添加 GitHub Actions Secrets
-
-打开你自己的 relay 仓库：
-
-**Settings → Secrets and variables → Actions → New repository secret**
-
-飞书 provider 使用：
+在仓库 **Settings → Secrets and variables → Actions → New repository secret** 添加：
 
 | Secret | 必填 | 内容 |
 | --- | --- | --- |
-| `FEISHU_WEBHOOK_URL` | 是 | 飞书自定义机器人 Webhook URL |
-| `FEISHU_WEBHOOK_SECRET` | 否，但推荐 | 飞书机器人“签名校验”的 Secret |
+| `FEISHU_WEBHOOK_URL` | 是 | 自定义机器人 Webhook URL |
+| `FEISHU_WEBHOOK_SECRET` | 否，但推荐 | 自定义机器人签名校验 Secret |
 
-默认 provider 就是 `feishu`，因此普通用户不用额外配置。未来如果仓库增加其他 provider，可在 **Actions → Variables** 设置 `RELAY_PROVIDER` 切换。
+### B. 企业自建应用（适合已有机器人/应用的用户）
+
+如果你已经有飞书企业自建应用，并且知道目标群的 `chat_id`，可以不创建 Webhook 机器人，改为添加：
+
+| Secret | 必填 | 内容 |
+| --- | --- | --- |
+| `FEISHU_APP_ID` | 是 | 飞书应用 App ID |
+| `FEISHU_APP_SECRET` | 是 | 飞书应用 App Secret |
+| `FEISHU_CHAT_ID` | 是 | 目标群 chat_id |
+
+Feishu provider 会优先使用 Webhook 模式；如果没有配置 `FEISHU_WEBHOOK_URL`，才会尝试企业自建应用模式。
+
+> 如果旧 App Secret 曾经进入 Git 历史、聊天或其他不受控位置，建议先在飞书后台轮换，再把新 Secret 放进 GitHub Actions Secrets。
+
+使用 GitHub 托管 runner 时，一般不要依赖固定出口 IP 白名单，因为 runner 的公网出口不是你的固定服务器。
+
+## 3. Provider 选择
+
+默认 provider 就是 `feishu`，因此这一版普通用户不用额外配置。
+
+未来仓库增加其他 provider 后，可以在：
+
+**Settings → Secrets and variables → Actions → Variables**
+
+添加：
+
+```text
+RELAY_PROVIDER=telegram
+```
+
+或对应 provider 名称。Secret 仍然只放 Actions Secrets，不放 Variables。
 
 ## 4. 先测试 GitHub → 消息渠道
 
@@ -89,7 +115,7 @@ message 填：
 ChatGPT Relay test
 ```
 
-运行成功后，飞书群应该立即收到消息。
+运行成功后，目标消息渠道应该立即收到消息。
 
 这个测试完全不依赖 ChatGPT，适合先确认 GitHub Actions → provider 这一半链路正常。
 
