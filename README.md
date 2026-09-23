@@ -137,6 +137,24 @@ python -m unittest discover -s tests -v
 python -m py_compile relay/main.py relay/providers/feishu.py
 ```
 
+## 常见问题
+
+**Actions 里看不到 “Relay message”**
+
+确认 workflow 已经存在于默认分支的 `.github/workflows/relay.yml`，并检查仓库 **Settings → Actions → General** 是否允许 GitHub Actions 运行。
+
+**ChatGPT 说看不到刚创建的 relay 仓库**
+
+如果 GitHub 连接只授权了“Selected repositories”，新建/从模板创建的仓库可能需要在 GitHub App 授权里补选，或者重新连接后授予该仓库访问权。
+
+**创建了 `[relay]` Issue，但一直没有自动关闭**
+
+打开仓库的 **Actions** 页面查看对应的 “Relay message” run。Issue 只有在 provider 成功返回后才会自动关闭，所以“仍然打开”通常意味着 workflow 被跳过或发送失败。
+
+**Workflow 报缺少 provider 凭据**
+
+检查 GitHub Actions Secrets 的名字是否完全一致。不要把真实 Secret 贴到 Issue、README 或聊天里；只确认 Secret 是否存在即可。
+
 ## 目录结构
 
 ```text
