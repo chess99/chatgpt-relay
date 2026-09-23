@@ -6,10 +6,9 @@ from relay import main
 
 class MainTests(unittest.TestCase):
     def test_dispatch_calls_selected_provider(self):
-        calls = []
-        with patch.dict(main.PROVIDERS, {"test": calls.append}, clear=True):
-            main.dispatch("TEST", "hello")
-        self.assertEqual(calls, ["hello"])
+        fake_spec = type("Spec", (), {"name": "test", "sender": lambda self, message: None})()
+        with patch.object(main, "resolve_provider", return_value=fake_spec):
+            self.assertEqual(main.dispatch("TEST", "hello"), "test")
 
     def test_unknown_provider_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unsupported RELAY_PROVIDER"):

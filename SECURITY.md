@@ -1,50 +1,39 @@
 # Security
 
-## 不要把 Secret 放进 ChatGPT Source 或 Git
+## Secret 只放 GitHub Actions Secrets
 
-不要提交任何 provider 的 Webhook URL、签名 Secret、Bot Token、App Secret、API Token 或其他凭据。
+不要把以下任何内容放进 ChatGPT Source、Git 文件、Issue、PR、日志或截图：
 
-对当前 Feishu provider，根据你选择的模式，只把对应值存进 **GitHub Actions repository secrets**：
+- Webhook URL
+- Bot Token / Access Token
+- App Secret
+- API Token / Auth Token
+- Twilio Auth Token
+- 其他 provider 凭据
 
-### Webhook 模式
+Webhook URL 本身也应视为 Secret，因为很多平台拿到 URL 就能直接发消息。
 
-- `FEISHU_WEBHOOK_URL`
-- `FEISHU_WEBHOOK_SECRET`（启用签名校验时）
+各 provider 使用的 Secret 名称见 [docs/PROVIDERS.md](docs/PROVIDERS.md)。
 
-Webhook URL 本身也应视为 Secret。
+## 仓库建议
 
-### 企业自建应用模式
+模板仓库可以公开，因为不包含凭据。
 
-- `FEISHU_APP_ID`
-- `FEISHU_APP_SECRET`
-- `FEISHU_CHAT_ID`
-
-其中 `FEISHU_APP_SECRET` 必须按 Secret 管理；`chat_id` 虽然通常不等同于密码，也不建议公开散播。
-
-## 推荐的仓库边界
-
-模板仓库可以公开，因为模板中没有凭据。
-
-真正用于 relay、配置了 GitHub Actions Secrets 的个人仓库推荐保持 **Private**。Workflow 还会检查：
+真正用于 relay 的个人仓库建议保持 **Private**，并只给本人或可信协作者访问。Workflow 还会额外检查：
 
 - Issue 标题必须以 `[relay]` 开头；
-- Issue 作者必须与仓库具有 Owner / Member / Collaborator 关联。
+- Issue 作者必须是 Owner / Member / Collaborator。
 
-这不是用来替代仓库权限控制，而是第二层保护。
+这是第二层保护，不替代 GitHub 仓库权限。
 
-## 凭据泄露怎么办
+## 日志与错误
 
-如果凭据曾经：
+Provider 共享的 HTTP 层不会把请求 URL 打印到错误里，避免 Webhook URL 泄漏。Provider 也不应打印 Authorization header、Token 或 Secret。
 
-- 提交到 Git；
-- 粘贴进 GitHub Issue；
-- 粘贴进公开聊天；
-- 出现在日志或截图；
+## 凭据泄露
 
-请直接去对应 provider 后台**轮换凭据**。只删除当前文件不能清除 Git 历史中的旧值。
+如果 Secret 曾经进入 Git 历史、Issue、公开聊天或日志，请直接去对应平台后台**轮换凭据**。删除最新文件不能清除旧 commit 中的值。
 
-## GitHub Actions 日志
+## 费用渠道
 
-Provider 实现不应输出 Secret。错误信息也应尽量只包含 HTTP 状态、服务端非敏感错误码和简短消息。
-
-新增 provider 时请遵守同样原则，详见 [docs/PROVIDERS.md](docs/PROVIDERS.md)。
+Twilio SMS 等渠道会产生真实费用。先在供应商侧配置预算/限额，并通过 Actions 手动测试确认目标号码后，再交给自动化使用。
