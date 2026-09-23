@@ -46,6 +46,9 @@ jobs:
           RELAY_PROVIDER: ${{ vars.RELAY_PROVIDER || 'feishu' }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_WEBHOOK_SECRET }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
         run: |
           RELAY_MESSAGE="$(cat "$RUNNER_TEMP/relay-message.txt")"
           export RELAY_MESSAGE
