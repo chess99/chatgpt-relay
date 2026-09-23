@@ -4,12 +4,22 @@
 
 不要提交任何 provider 的 Webhook URL、签名 Secret、Bot Token、App Secret、API Token 或其他凭据。
 
-对当前 Feishu provider，只把以下值存进 **GitHub Actions repository secrets**：
+对当前 Feishu provider，根据你选择的模式，只把对应值存进 **GitHub Actions repository secrets**：
+
+### Webhook 模式
 
 - `FEISHU_WEBHOOK_URL`
 - `FEISHU_WEBHOOK_SECRET`（启用签名校验时）
 
 Webhook URL 本身也应视为 Secret。
+
+### 企业自建应用模式
+
+- `FEISHU_APP_ID`
+- `FEISHU_APP_SECRET`
+- `FEISHU_CHAT_ID`
+
+其中 `FEISHU_APP_SECRET` 必须按 Secret 管理；`chat_id` 虽然通常不等同于密码，也不建议公开散播。
 
 ## 推荐的仓库边界
 
